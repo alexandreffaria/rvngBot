@@ -1,5 +1,5 @@
 from pywa import WhatsApp
-from pywa.types import Message
+from pywa.types import Message, CallbackData
 from fastapi import FastAPI
 import uvicorn
 from config.settings import PHONE_ID, TOKEN, CALLBACK_URL, VERIFY_TOKEN, APP_ID, APP_SECRET, ME
@@ -20,8 +20,12 @@ wa = WhatsApp(
 message_handler = MessageHandler(wa)
 
 @wa.on_message()
-def handle_message(client: WhatsApp, message: Message):
+async def handle_message(client: WhatsApp, message: Message):
     message_handler.handle_message(message)
+
+@wa.on_callback_button()
+async def handle_callback(client: WhatsApp, callback: CallbackData):
+    message_handler.handle_callback(callback)
 
 if __name__ == '__main__':
     uvicorn.run(fastapi_app, port=8080)
