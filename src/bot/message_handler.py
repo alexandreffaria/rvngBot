@@ -49,62 +49,30 @@ class MessageHandler:
             )
             self.storage.set(user_number, 'state', 'awaiting_role')
 
+        elif current_state == 'awaiting_pd_rosa_quantity':
+            # User has provided the quantity of rosa porta dente de leite
+            self.storage.set(user_number, 'pd_rosa', user_input)
+            self.ask_next_color(user_number, 'Azul')
+
+        elif current_state == 'awaiting_pd_azul_quantity':
+            # User has provided the quantity of azul porta dente de leite
+            self.storage.set(user_number, 'pd_azul', user_input)
+            self.ask_next_color(user_number, 'Laranja')
+
+        elif current_state == 'awaiting_pd_laranja_quantity':
+            # User has provided the quantity of laranja porta dente de leite
+            self.storage.set(user_number, 'pd_laranja', user_input)
+            self.ask_next_color(user_number, 'Verde')
+
+        elif current_state == 'awaiting_pd_verde_quantity':
+            # User has provided the quantity of verde porta dente de leite
+            self.storage.set(user_number, 'pd_verde', user_input)
+            self.ask_for_book(user_number)
+
         elif current_state == 'awaiting_book_quantity':
             # User has provided the quantity of books
             self.storage.set(user_number, 'book_quantity', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Agora que você sabe das nossas condições, selecione o produto que você deseja:",
-                buttons=[
-                    Button("Porta Dente de Leite", callback_data="Porta Dente de Leite"),
-                    Button("Livro", callback_data="Livro - Dentinho da Fada"),
-                    Button("Finalizar pedido", callback_data="Finalizar pedido"),
-                ]
-            )
-
-        elif current_state == 'awaiting_pd_rosa':
-            # User has provided the quantity of rosa porta dente de leite
-            self.storage.set(user_number, 'pd_rosa', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Quantos porta dente de leite azul você gostaria?"
-            )
-            self.storage.set(user_number, 'state', 'awaiting_pd_azul')
-
-        elif current_state == 'awaiting_pd_azul':
-            # User has provided the quantity of azul porta dente de leite
-            self.storage.set(user_number, 'pd_azul', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Quantos porta dente de leite laranja você gostaria?"
-            )
-            self.storage.set(user_number, 'state', 'awaiting_pd_laranja')
-
-        elif current_state == 'awaiting_pd_laranja':
-            # User has provided the quantity of laranja porta dente de leite
-            self.storage.set(user_number, 'pd_laranja', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Quantos porta dente de leite verde você gostaria?"
-            )
-            self.storage.set(user_number, 'state', 'awaiting_pd_verde')
-
-        elif current_state == 'awaiting_pd_verde':
-            # User has provided the quantity of verde porta dente de leite
-            self.storage.set(user_number, 'pd_verde', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Agora que você sabe das nossas condições, selecione o produto que você deseja:",
-                buttons=[
-                    Button("Porta Dente de Leite", callback_data="Porta Dente de Leite"),
-                    Button("Livro", callback_data="Livro"),
-                    Button("Finalizar pedido", callback_data="Finalizar pedido"),
-                ]
-            )
-            self.storage.set(user_number, 'state', 'order_start')
-
-        
-        
+            self.finalize_order(user_number)
 
     def handle_callback_button(self, callback_button: CallbackButton):
         user_number = callback_button.from_user.wa_id
@@ -122,62 +90,92 @@ class MessageHandler:
             self.tag_user(user_number)
             self.whatsapp_client.send_message(
                 to=user_number,
-                text="Obrigada pelas informações 😊. E agora, o que você gostaria?",
+                text="Obrigada pelas informações 😊. Você gostaria de comprar o Porta Dentinho de Leite?",
                 buttons=[
-                    Button("Fazer um pedido", callback_data="Fazer um pedido"),
-                    Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
+                    Button("Sim", callback_data="Sim"),
+                    Button("Não", callback_data="Não"),
                 ]
             )
-            self.storage.set(user_number, 'state', 'awaiting_next_action')
+            self.storage.set(user_number, 'state', 'awaiting_pd_interest')
 
-        elif current_state == 'awaiting_next_action' and user_input == "Fazer um pedido":
-            # User wants to place an order
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Temos condições especiais para você, olha só!"
-            )
-            self.whatsapp_client.send_image(
-                to=user_number,
-                caption="Porta Dentinho de Leite",
-                image="tabela_porta_dentinho.jpeg"
-            )
-            self.whatsapp_client.send_image(
-                to=user_number,
-                caption="Livro - Dentinho da Fada",
-                image="tabela_livro.jpeg"
-            )
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Vamos montar seu pedido!"
-            )
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Agora que você sabe das nossas condições, selecione o produto que você deseja:",
-                buttons=[
-                    Button("Porta Dente de Leite", callback_data="Porta Dente de Leite"),
-                    Button("Livro", callback_data="Livro - Dentinho da Fada"),
-                    Button("Finalizar pedido", callback_data="Finalizar pedido"),
-                ]
-            )
-            self.storage.set(user_number, 'state', 'order_start')
+        elif current_state == 'awaiting_pd_interest':
+            if user_input == "Sim":
+                self.ask_next_color(user_number, 'Rosa')
+            else:
+                self.ask_for_book(user_number)
 
-        elif current_state == 'order_start':
-            if user_input == "Livro":
+        elif current_state == 'awaiting_pd_rosa':
+            if user_input == "Sim":
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Quantos porta dente de leite rosa você gostaria?"
+                )
+                self.storage.set(user_number, 'state', 'awaiting_pd_rosa_quantity')
+            else:
+                self.ask_next_color(user_number, 'Azul')
+
+        elif current_state == 'awaiting_pd_azul':
+            if user_input == "Sim":
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Quantos porta dente de leite azul você gostaria?"
+                )
+                self.storage.set(user_number, 'state', 'awaiting_pd_azul_quantity')
+            else:
+                self.ask_next_color(user_number, 'Laranja')
+
+        elif current_state == 'awaiting_pd_laranja':
+            if user_input == "Sim":
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Quantos porta dente de leite laranja você gostaria?"
+                )
+                self.storage.set(user_number, 'state', 'awaiting_pd_laranja_quantity')
+            else:
+                self.ask_next_color(user_number, 'Verde')
+
+        elif current_state == 'awaiting_pd_verde':
+            if user_input == "Sim":
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Quantos porta dente de leite verde você gostaria?"
+                )
+                self.storage.set(user_number, 'state', 'awaiting_pd_verde_quantity')
+            else:
+                self.ask_for_book(user_number)
+
+        elif current_state == 'awaiting_book':
+            if user_input == "Sim":
                 self.whatsapp_client.send_message(
                     to=user_number,
                     text="Quantos livros 'Dentinho da Fada' você gostaria?"
                 )
                 self.storage.set(user_number, 'state', 'awaiting_book_quantity')
-            elif user_input == "Porta Dente de Leite":
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Quantos porta dente de leite rosa você gostaria?"
-                )
-                self.storage.set(user_number, 'state', 'awaiting_pd_rosa')
+            else:
+                self.finalize_order(user_number)
 
-        elif user_input == "Finalizar pedido":
-            self.finalize_order(user_number)
-    
+    def ask_next_color(self, user_number, color):
+        self.whatsapp_client.send_message(
+            to=user_number,
+            text=f"Você gostaria de comprar o porta dentinho {color}?",
+            buttons=[
+                Button("Sim", callback_data="Sim"),
+                Button("Não", callback_data="Não"),
+            ]
+        )
+        self.storage.set(user_number, f'state', f'awaiting_pd_{color.lower()}')
+
+    def ask_for_book(self, user_number):
+        self.whatsapp_client.send_message(
+            to=user_number,
+            text="Você gostaria de comprar o Livro - Dentinho da Fada?",
+            buttons=[
+                Button("Sim", callback_data="Sim"),
+                Button("Não", callback_data="Não"),
+            ]
+        )
+        self.storage.set(user_number, 'state', 'awaiting_book')
+
     def finalize_order(self, user_number):
         # Gather all the necessary information
         pd_azul = self.storage.get(user_number, 'pd_azul', '0')
@@ -187,7 +185,14 @@ class MessageHandler:
         book_quantity = self.storage.get(user_number, 'book_quantity', '0')
         email = self.storage.get(user_number, 'email')
         name = self.storage.get(user_number, 'name')
-        phone = self.storage.get(user_number, 'phone', '')  # Assuming you have the phone number stored
+
+        # Check if any items were selected
+        if pd_azul == '0' and pd_rosa == '0' and pd_verde == '0' and pd_laranja == '0' and book_quantity == '0':
+            self.whatsapp_client.send_message(
+                to=user_number,
+                text="Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item."
+            )
+            return
 
         # Create the link dynamically
         base_url = "https://loja.dentinhodafada.com.br/cart/"
@@ -205,13 +210,15 @@ class MessageHandler:
             product_list.append(f"45653364015381:{book_quantity}")
 
         products = ",".join(product_list)
-        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={' '.join(name.split()[1:])}&checkout[shipping_address][phone]={phone}"
+        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={' '.join(name.split()[1:])}&checkout[shipping_address][phone]={user_number}"
 
         # Send the checkout link to the user
         self.whatsapp_client.send_message(
             to=user_number,
-            text=f"Aqui está o link para finalizar o seu pedido: {checkout_url}"
+            text=f"Segue o link do seu pedido {name.split()[0].capitalize()}: ({checkout_url})"
         )
+
+        self.storage.set(user_number, 'state', None)
 
     def tag_user(self, user_number):
         name = self.storage.get(user_number, 'name')
