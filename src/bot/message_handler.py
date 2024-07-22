@@ -24,6 +24,7 @@ class MessageHandler:
                 to=user_number,
                 text="Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?",
             )
+
             self.storage.set(user_number, 'state', 'awaiting_name')
 
         elif current_state == 'awaiting_name':
@@ -183,18 +184,44 @@ class MessageHandler:
 
         elif current_state == 'awaiting_book':
             if user_input == "Sim":
+                self.whatsapp_client.send_sticker(
+                    to=user_number,
+                    sticker="stickers/livro-dentinho-da-fada.webp",
+                    mime_type="image/webp"
+                )
                 self.whatsapp_client.send_message(
                     to=user_number,
-                    text="Quantos livros 'Dentinho da Fada' você gostaria?"
+                    text="Quantos livros *Dentinho da Fada* você gostaria? 📖"
                 )
                 self.storage.set(user_number, 'state', 'awaiting_book_quantity')
             else:
                 self.finalize_order(user_number)
 
     def ask_next_color(self, user_number, color):
+
+        sticker_path = ""
+        emoji_color = ""
+        if color == "Rosa":
+            sticker_path = "stickers/porta-dente-rosa.webp"
+            emoji_color = "🩷"
+        elif color == "Azul":
+            sticker_path = "stickers/porta-dente-azul.webp"
+            emoji_color = "🔵"
+        elif color == "Laranja":
+            sticker_path = "stickers/porta-dente-laranja.webp"
+            emoji_color = "🟠"
+        elif color == "Verde":
+            sticker_path = "stickers/porta-dente-verde.webp"
+            emoji_color = "🟢"
+
+        self.whatsapp_client.send_sticker(
+            to=user_number,
+            sticker=sticker_path,
+            mime_type="image/webp"
+        )
         self.whatsapp_client.send_message(
             to=user_number,
-            text=f"Você gostaria de comprar o porta dentinho {color}?",
+            text=f"Você gostaria de comprar o porta dentinho *{color}*? {emoji_color}",
             buttons=[
                 Button("Sim", callback_data="Sim"),
                 Button("Não", callback_data="Não"),
@@ -247,7 +274,7 @@ class MessageHandler:
             product_list.append(f"45653364015381:{book_quantity}")
 
         products = ",".join(product_list)
-        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={' '.join(name.split()[1:])}&checkout[shipping_address][phone]={user_number}"
+        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={name.split()[-1]}&checkout[shipping_address][phone]={user_number}"
 
         # Send the checkout link to the user
         self.whatsapp_client.send_message(
@@ -255,6 +282,11 @@ class MessageHandler:
             text=f"Segue o link do seu pedido {name.split()[0].capitalize()}: ({checkout_url})"
         )
 
+        self.storage.set(user_number, 'pd_azul', '0')
+        self.storage.set(user_number, 'pd_rosa', '0')
+        self.storage.set(user_number, 'pd_verde', '0')
+        self.storage.set(user_number, 'pd_laranja', '0')
+        self.storage.set(user_number, 'book_quantity', '0')
         self.storage.set(user_number, 'state', None)
 
     def tag_user(self, user_number):
