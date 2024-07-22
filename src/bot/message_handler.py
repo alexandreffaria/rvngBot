@@ -90,13 +90,49 @@ class MessageHandler:
             self.tag_user(user_number)
             self.whatsapp_client.send_message(
                 to=user_number,
-                text="Obrigada pelas informações 😊. Você gostaria de comprar o Porta Dentinho de Leite?",
+                text="Obrigada pelas informações 😊. Como podemos te ajudar hoje?",
                 buttons=[
-                    Button("Sim", callback_data="Sim"),
-                    Button("Não", callback_data="Não"),
+                    Button("Fazer um pedido", callback_data="Fazer um pedido"),
+                    Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
                 ]
             )
-            self.storage.set(user_number, 'state', 'awaiting_pd_interest')
+            self.storage.set(user_number, 'state', 'awaiting_help_type')
+
+        elif current_state == 'awaiting_help_type':
+            if user_input == "Fazer um pedido":
+                self.whatsapp_client.send_message(
+                to=user_number,
+                text="Temos condições especiais para você, olha só!"
+                )
+                self.whatsapp_client.send_image(
+                    to=user_number,
+                    caption="Porta Dentinho de Leite",
+                    image="images/tabela_porta_dentinho.jpeg"
+                )
+                self.whatsapp_client.send_image(
+                    to=user_number,
+                    caption="Livro - Dentinho da Fada",
+                    image="images/tabela_livro.jpeg"
+                )
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Vamos montar seu pedido!"
+                )
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Você gostaria de comprar o Porta Dentinho de Leite?",
+                    buttons=[
+                        Button("Sim", callback_data="Sim"),
+                        Button("Não", callback_data="Não"),
+                    ]
+                )
+                self.storage.set(user_number, 'state', 'awaiting_pd_interest')
+            elif user_input == "Tirar dúvidas":
+                self.whatsapp_client.send_message(
+                    to=user_number,
+                    text="Vamos entrar em contato com você em breve para tirar suas dúvidas."
+                )
+                self.storage.set(user_number, 'state', None)
 
         elif current_state == 'awaiting_pd_interest':
             if user_input == "Sim":
@@ -106,6 +142,7 @@ class MessageHandler:
 
         elif current_state == 'awaiting_pd_rosa':
             if user_input == "Sim":
+
                 self.whatsapp_client.send_message(
                     to=user_number,
                     text="Quantos porta dente de leite rosa você gostaria?"
