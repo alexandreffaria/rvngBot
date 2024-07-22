@@ -175,6 +175,44 @@ class MessageHandler:
                 )
                 self.storage.set(user_number, 'state', 'awaiting_pd_rosa')
 
+        elif user_input == "Finalizar pedido":
+            self.finalize_order(user_number)
+    
+    def finalize_order(self, user_number):
+        # Gather all the necessary information
+        pd_azul = self.storage.get(user_number, 'pd_azul', '0')
+        pd_rosa = self.storage.get(user_number, 'pd_rosa', '0')
+        pd_verde = self.storage.get(user_number, 'pd_verde', '0')
+        pd_laranja = self.storage.get(user_number, 'pd_laranja', '0')
+        book_quantity = self.storage.get(user_number, 'book_quantity', '0')
+        email = self.storage.get(user_number, 'email')
+        name = self.storage.get(user_number, 'name')
+        phone = self.storage.get(user_number, 'phone', '')  # Assuming you have the phone number stored
+
+        # Create the link dynamically
+        base_url = "https://loja.dentinhodafada.com.br/cart/"
+        product_list = []
+
+        if pd_azul != '0':
+            product_list.append(f"48281127977237:{pd_azul}")
+        if pd_rosa != '0':
+            product_list.append(f"48281127944469:{pd_rosa}")
+        if pd_verde != '0':
+            product_list.append(f"48281128010005:{pd_verde}")
+        if pd_laranja != '0':
+            product_list.append(f"48281128042773:{pd_laranja}")
+        if book_quantity != '0':
+            product_list.append(f"45653364015381:{book_quantity}")
+
+        products = ",".join(product_list)
+        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={' '.join(name.split()[1:])}&checkout[shipping_address][phone]={phone}"
+
+        # Send the checkout link to the user
+        self.whatsapp_client.send_message(
+            to=user_number,
+            text=f"Aqui está o link para finalizar o seu pedido: {checkout_url}"
+        )
+
     def tag_user(self, user_number):
         name = self.storage.get(user_number, 'name')
         email = self.storage.get(user_number, 'email')
