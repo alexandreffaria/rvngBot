@@ -7,5 +7,5 @@ class Storage:
             self.data[user_id] = {}
         self.data[user_id][key] = value
 
-    def get(self, user_id, key):
-        return self.data.get(user_id, {}).get(key, None)
+    def get(self, user_id, key, default=None):
+        return self.data.get(user_id, {}).get(key, default)
