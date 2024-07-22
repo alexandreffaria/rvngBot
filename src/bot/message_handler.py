@@ -2,6 +2,7 @@ from pywa import WhatsApp
 from pywa.types import Message, Button, CallbackButton
 from .storage import Storage
 import logging
+import time
 
 class MessageHandler:
     def __init__(self, whatsapp_client: WhatsApp):
@@ -119,6 +120,15 @@ class MessageHandler:
                     to=user_number,
                     text="Vamos montar seu pedido!"
                 )
+                
+                time.sleep(3)
+
+                self.whatsapp_client.send_sticker(
+                    to=user_number,
+                    sticker="stickers/todos-os-produtos.webp",
+                    mime_type="image/webp"
+                )
+
                 self.whatsapp_client.send_message(
                     to=user_number,
                     text="Você gostaria de comprar o Porta Dentinho de Leite?",
