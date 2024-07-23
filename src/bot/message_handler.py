@@ -1,5 +1,5 @@
 from pywa import WhatsApp
-from pywa.types import Message, Button, CallbackButton
+from pywa.types import Message, Button, CallbackButton, ButtonUrl, Contact
 from .storage import Storage
 import logging
 import time
@@ -292,10 +292,20 @@ class MessageHandler:
         products = ",".join(product_list)
         checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={name.split()[-1]}&checkout[shipping_address][phone]={user_number}"
 
+        self.whatsapp_client.send_message(
+            to=user_number,
+            text=f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos!"
+        )
+        print(f"CHECKOUTURL: {checkout_url}")
         # Send the checkout link to the user
         self.whatsapp_client.send_message(
             to=user_number,
-            text=f"Segue o link do seu pedido {name.split()[0].capitalize()}: ({checkout_url})"
+            text=f"Segue o link do seu pedido: 🛒",
+            footer="A magia de cuidar dos dentinhos!",
+            buttons=ButtonUrl(
+                title="Link de pagamento",
+                url=f"https://google.com",
+            )
         )
 
         self.storage.set(user_number, 'pd_azul', '0')
@@ -315,5 +325,14 @@ class MessageHandler:
     def handle_human_request(self, user_number):
         self.whatsapp_client.send_message(
             to=user_number,
-            text="Para falar com um atendente, por favor entre em contato pelo número: +55 31 1234-5678"
+            text="Para falar com um atendente, por favor entre em contato pelo seguinte contato. 📞"
+        )
+        self.whatsapp_client.send_contact(
+            to=user_number,
+            contact=Contact(
+                name=Contact.Name(formatted_name='Dentinho da Fada', first_name='Dentinho da Fada'),
+                phones=[Contact.Phone(phone='1234567890', type='MAIN')],
+                emails=[Contact.Email(email='vendas@dentinhodafada.com.br', type='WORK')],
+                urls=[Contact.Url(url='https://dentinhodafada.com.br', type='WORK')],
+            )
         )
