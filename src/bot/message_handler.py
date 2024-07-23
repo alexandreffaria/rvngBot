@@ -147,7 +147,16 @@ class MessageHandler:
             elif user_input == "Tirar dúvidas":
                 self.whatsapp_client.send_message(
                     to=user_number,
-                    text="Vamos entrar em contato com você em breve para tirar suas dúvidas."
+                    text="No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞"
+                )
+                self.whatsapp_client.send_contact(
+                    to=user_number,
+                    contact=Contact(
+                        name=Contact.Name(formatted_name='Dentinho da Fada', first_name='Dentinho da Fada'),
+                        phones=[Contact.Phone(phone='553184161141', type='MAIN')],
+                        emails=[Contact.Email(email='vendas@dentinhodafada.com.br', type='WORK')],
+                        urls=[Contact.Url(url='https://dentinhodafada.com.br', type='WORK')],
+                    )
                 )
                 self.storage.set(user_number, 'state', None)
 
@@ -331,7 +340,7 @@ class MessageHandler:
             to=user_number,
             contact=Contact(
                 name=Contact.Name(formatted_name='Dentinho da Fada', first_name='Dentinho da Fada'),
-                phones=[Contact.Phone(phone='1234567890', type='MAIN')],
+                phones=[Contact.Phone(phone='553184161141', type='MAIN')],
                 emails=[Contact.Email(email='vendas@dentinhodafada.com.br', type='WORK')],
                 urls=[Contact.Url(url='https://dentinhodafada.com.br', type='WORK')],
             )
