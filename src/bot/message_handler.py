@@ -15,6 +15,12 @@ class MessageHandler:
 
         logging.info(f"Received message from {user_number}: {user_input}")
 
+         # Check if the user wants to talk to a human
+        if "atendente" in user_input or "humano" in user_input:
+            self.handle_human_request(user_number)
+            self.storage.set(user_number, 'state', None)
+            return
+
         # Get the current state of the user
         current_state = self.storage.get(user_number, 'state')
         logging.info(f"Current state for {user_number}: {current_state}")
@@ -120,7 +126,7 @@ class MessageHandler:
                     to=user_number,
                     text="Vamos montar seu pedido!"
                 )
-                
+
                 time.sleep(3)
 
                 self.whatsapp_client.send_sticker(
@@ -305,3 +311,9 @@ class MessageHandler:
         role = self.storage.get(user_number, 'role')
         # Here you can implement tagging logic, e.g., save to database or CRM
         logging.info(f"Tagging user {user_number}: Name={name}, Email={email}, Role={role}")
+
+    def handle_human_request(self, user_number):
+        self.whatsapp_client.send_message(
+            to=user_number,
+            text="Para falar com um atendente, por favor entre em contato pelo número: +55 31 1234-5678"
+        )
