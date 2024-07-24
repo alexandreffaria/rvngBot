@@ -3,6 +3,7 @@ from pywa.types import Message, Button, CallbackButton, ButtonUrl, Contact
 from .storage import Storage
 import logging
 import time
+import requests
 
 class MessageHandler:
     def __init__(self, whatsapp_client: WhatsApp):
@@ -300,12 +301,15 @@ class MessageHandler:
 
         products = ",".join(product_list)
         checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={name.split()[-1]}&checkout[shipping_address][phone]={user_number}"
+        shortened_checkout_url = self.shorten_url(checkout_url)
 
         self.whatsapp_client.send_message(
             to=user_number,
             text=f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos!"
         )
+
         print(f"CHECKOUTURL: {checkout_url}")
+        print(f"SRHORTCHECKOUTURL: {shortened_checkout_url}")
         # Send the checkout link to the user
         self.whatsapp_client.send_message(
             to=user_number,
@@ -313,7 +317,7 @@ class MessageHandler:
             footer="A magia de cuidar dos dentinhos!",
             buttons=ButtonUrl(
                 title="Link de pagamento",
-                url=f"https://google.com",
+                url=shortened_checkout_url,
             )
         )
 
@@ -323,6 +327,22 @@ class MessageHandler:
         self.storage.set(user_number, 'pd_laranja', '0')
         self.storage.set(user_number, 'book_quantity', '0')
         self.storage.set(user_number, 'state', None)
+
+    def shorten_url(self, long_url):
+        url = "https://url-shortener-service.p.rapidapi.com/shorten"
+        payload = f"-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url\"\r\n\r\n{long_url}\r\n-----011000010111000001101001--\r\n\r\n"
+        headers = {
+            "x-rapidapi-key": "94442fdf41msh063434b9eadbca4p10158fjsn2df90fa67770",
+            "x-rapidapi-host": "url-shortener-service.p.rapidapi.com",
+            "Content-Type": "multipart/form-data; boundary=---011000010111000001101001"
+        }
+
+        response = requests.post(url, data=payload, headers=headers)
+        if response.status_code == 200:
+            return response.json().get("result_url")
+        else:
+            logging.error(f"Failed to shorten URL: {response.text}")
+            return long_url
 
     def tag_user(self, user_number):
         name = self.storage.get(user_number, 'name')
