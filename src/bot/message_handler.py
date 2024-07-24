@@ -1,6 +1,7 @@
 from pywa import WhatsApp
 from pywa.types import Message, Button, CallbackButton, ButtonUrl, Contact
 from .storage import Storage
+from .database import Database
 import logging
 import time
 import requests
@@ -9,14 +10,19 @@ class MessageHandler:
     def __init__(self, whatsapp_client: WhatsApp):
         self.whatsapp_client = whatsapp_client
         self.storage = Storage()
+        self.database = Database()
 
     def handle_message(self, message: Message):
         user_number = message.from_user.wa_id
         user_input = message.text.strip()
+        timestamp = message.timestamp
 
         logging.info(f"Received message from {user_number}: {user_input}")
 
-         # Check if the user wants to talk to a human
+        # Store the incoming message in the database
+        self.database.insert_message(user_number, "user", user_input, timestamp)
+
+        # Check if the user wants to talk to a human
         if "atendente" in user_input or "humano" in user_input:
             self.handle_human_request(user_number)
             self.storage.set(user_number, 'state', None)
@@ -28,34 +34,23 @@ class MessageHandler:
 
         if current_state is None:
             # Initial interaction
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?",
-            )
-
+            self.send_message(user_number, "Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?")
             self.storage.set(user_number, 'state', 'awaiting_name')
 
         elif current_state == 'awaiting_name':
             # User has provided their name
             self.storage.set(user_number, 'name', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text=f"Muito obrigada, {user_input.split(' ')[0].capitalize()}. E qual o seu email?",
-            )
+            self.send_message(user_number, f"Muito obrigada, {user_input.split(' ')[0].capitalize()}. E qual o seu email?")
             self.storage.set(user_number, 'state', 'awaiting_email')
 
         elif current_state == 'awaiting_email':
             # User has provided their email
             self.storage.set(user_number, 'email', user_input)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Qual sua área de atuação?",
-                buttons=[
-                    Button("Dentista", callback_data="Dentista"),
-                    Button("Lojista", callback_data="Lojista"),
-                    Button("Outros", callback_data="Outros"),
-                ]
-            )
+            self.send_message(user_number, "Qual sua área de atuação?", buttons=[
+                Button("Dentista", callback_data="Dentista"),
+                Button("Lojista", callback_data="Lojista"),
+                Button("Outros", callback_data="Outros"),
+            ])
             self.storage.set(user_number, 'state', 'awaiting_role')
 
         elif current_state == 'awaiting_pd_rosa_quantity':
@@ -83,11 +78,23 @@ class MessageHandler:
             self.storage.set(user_number, 'book_quantity', user_input)
             self.finalize_order(user_number)
 
+    def send_message(self, user_number, text, buttons=None, footer=None):
+        self.whatsapp_client.send_message(to=user_number, text=text, buttons=buttons, footer=footer)
+        # Store the outgoing message in the database
+        timestamp = time.time()
+        if buttons:
+            self.database.insert_message(user_number, "bot", f"{text}: {[buttons]}", timestamp)
+        else:
+            self.database.insert_message(user_number, "bot", f"{text}", timestamp)
+
     def handle_callback_button(self, callback_button: CallbackButton):
         user_number = callback_button.from_user.wa_id
         user_input = callback_button.data
 
         logging.info(f"Received callback from {user_number}: {user_input}")
+
+        # Store the incoming callback data as a message
+        self.database.insert_message(user_number, "user", user_input, time.time())
 
         # Get the current state of the user
         current_state = self.storage.get(user_number, 'state')
@@ -97,22 +104,16 @@ class MessageHandler:
             # User has provided their role
             self.storage.set(user_number, 'role', user_input)
             self.tag_user(user_number)
-            self.whatsapp_client.send_message(
-                to=user_number,
-                text="Obrigada pelas informações 😊. Como podemos te ajudar hoje?",
-                buttons=[
-                    Button("Fazer um pedido", callback_data="Fazer um pedido"),
-                    Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
-                ]
-            )
+            self.send_message(user_number, "Obrigada pelas informações 😊. Como podemos te ajudar hoje?", buttons=[
+                Button("Fazer um pedido", callback_data="Fazer um pedido"),
+                Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
+            ])
             self.storage.set(user_number, 'state', 'awaiting_help_type')
 
         elif current_state == 'awaiting_help_type':
             if user_input == "Fazer um pedido":
-                self.whatsapp_client.send_message(
-                to=user_number,
-                text="Temos condições especiais para você, olha só!"
-                )
+                self.send_message(user_number, "Temos condições especiais para você, olha só!")
+                
                 self.whatsapp_client.send_image(
                     to=user_number,
                     caption="Porta Dentinho de Leite",
@@ -123,10 +124,7 @@ class MessageHandler:
                     caption="Livro - Dentinho da Fada",
                     image="images/tabela_livro.jpeg"
                 )
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Vamos montar seu pedido!"
-                )
+                self.send_message(user_number, "Vamos montar seu pedido!")
 
                 time.sleep(3)
 
@@ -136,20 +134,14 @@ class MessageHandler:
                     mime_type="image/webp"
                 )
 
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Você gostaria de comprar o Porta Dentinho de Leite?",
-                    buttons=[
+                self.send_message(user_number, "Você gostaria de comprar o Porta Dentinho de Leite?",buttons=[
                         Button("Sim", callback_data="Sim"),
                         Button("Não", callback_data="Não"),
-                    ]
-                )
+                    ])
+               
                 self.storage.set(user_number, 'state', 'awaiting_pd_interest')
             elif user_input == "Tirar dúvidas":
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞"
-                )
+                self.send_message(user_number, "No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞")
                 self.whatsapp_client.send_contact(
                     to=user_number,
                     contact=Contact(
@@ -169,41 +161,28 @@ class MessageHandler:
 
         elif current_state == 'awaiting_pd_rosa':
             if user_input == "Sim":
-
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Quantos porta dente de leite rosa você gostaria?"
-                )
+                self.send_message(user_number, "Quantos porta dente de leite rosa você gostaria?")
                 self.storage.set(user_number, 'state', 'awaiting_pd_rosa_quantity')
             else:
                 self.ask_next_color(user_number, 'Azul')
 
         elif current_state == 'awaiting_pd_azul':
             if user_input == "Sim":
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Quantos porta dente de leite azul você gostaria?"
-                )
+                self.send_message(user_number, "Quantos porta dente de leite *azul* você gostaria?")
                 self.storage.set(user_number, 'state', 'awaiting_pd_azul_quantity')
             else:
                 self.ask_next_color(user_number, 'Laranja')
 
         elif current_state == 'awaiting_pd_laranja':
             if user_input == "Sim":
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Quantos porta dente de leite laranja você gostaria?"
-                )
+                self.send_message(user_number, "Quantos porta dente de leite *laranja* você gostaria?")
                 self.storage.set(user_number, 'state', 'awaiting_pd_laranja_quantity')
             else:
                 self.ask_next_color(user_number, 'Verde')
 
         elif current_state == 'awaiting_pd_verde':
             if user_input == "Sim":
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Quantos porta dente de leite verde você gostaria?"
-                )
+                self.send_message(user_number, "Quantos porta dente de leite *verde* você gostaria?")
                 self.storage.set(user_number, 'state', 'awaiting_pd_verde_quantity')
             else:
                 self.ask_for_book(user_number)
@@ -215,10 +194,7 @@ class MessageHandler:
                     sticker="stickers/livro-dentinho-da-fada.webp",
                     mime_type="image/webp"
                 )
-                self.whatsapp_client.send_message(
-                    to=user_number,
-                    text="Quantos livros *Dentinho da Fada* você gostaria? 📖"
-                )
+                self.send_message(user_number, "Quantos livros *Dentinho da Fada* você gostaria? 📖?")
                 self.storage.set(user_number, 'state', 'awaiting_book_quantity')
             else:
                 self.finalize_order(user_number)
@@ -245,25 +221,24 @@ class MessageHandler:
             sticker=sticker_path,
             mime_type="image/webp"
         )
-        self.whatsapp_client.send_message(
-            to=user_number,
-            text=f"Você gostaria de comprar o porta dentinho *{color}*? {emoji_color}",
+        self.send_message(
+            user_number, 
+            f"Você gostaria de comprar o porta dentinho *{color}*? {emoji_color}",
             buttons=[
                 Button("Sim", callback_data="Sim"),
                 Button("Não", callback_data="Não"),
-            ]
-        )
+        ])
         self.storage.set(user_number, f'state', f'awaiting_pd_{color.lower()}')
 
     def ask_for_book(self, user_number):
-        self.whatsapp_client.send_message(
-            to=user_number,
-            text="Você gostaria de comprar o Livro - Dentinho da Fada?",
+        self.send_message(
+            user_number, 
+            "Você gostaria de comprar o Livro - Dentinho da Fada?",
             buttons=[
                 Button("Sim", callback_data="Sim"),
                 Button("Não", callback_data="Não"),
-            ]
-        )
+            ])
+
         self.storage.set(user_number, 'state', 'awaiting_book')
 
     def finalize_order(self, user_number):
@@ -278,11 +253,12 @@ class MessageHandler:
 
         # Check if any items were selected
         if pd_azul == '0' and pd_rosa == '0' and pd_verde == '0' and pd_laranja == '0' and book_quantity == '0':
+            self.send_message(user_number, "Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item.")
             self.whatsapp_client.send_message(
                 to=user_number,
-                text="Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item."
+                text=""
             )
-            return
+            self.storage.set(user_number, 'state', 'awaiting_pd_interest')
 
         # Create the link dynamically
         base_url = "https://loja.dentinhodafada.com.br/cart/"
@@ -302,23 +278,17 @@ class MessageHandler:
         products = ",".join(product_list)
         checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={name.split()[-1]}&checkout[shipping_address][phone]={user_number}"
         shortened_checkout_url = self.shorten_url(checkout_url)
+        self.send_message(user_number, f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos!")
 
-        self.whatsapp_client.send_message(
-            to=user_number,
-            text=f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos!"
-        )
-
-        print(f"CHECKOUTURL: {checkout_url}")
-        print(f"SRHORTCHECKOUTURL: {shortened_checkout_url}")
         # Send the checkout link to the user
-        self.whatsapp_client.send_message(
-            to=user_number,
-            text=f"Segue o link do seu pedido: 🛒",
-            footer="A magia de cuidar dos dentinhos!",
+        self.send_message(
+            user_number, 
+            f"🛒 Segue o link do seu pedido:", 
             buttons=ButtonUrl(
                 title="Link de pagamento",
                 url=shortened_checkout_url,
-            )
+            ),
+            footer="A magia de cuidar dos dentinhos!"
         )
 
         self.storage.set(user_number, 'pd_azul', '0')
@@ -352,10 +322,7 @@ class MessageHandler:
         logging.info(f"Tagging user {user_number}: Name={name}, Email={email}, Role={role}")
 
     def handle_human_request(self, user_number):
-        self.whatsapp_client.send_message(
-            to=user_number,
-            text="Para falar com um atendente, por favor entre em contato pelo seguinte contato. 📞"
-        )
+        self.send_message(user_number, "No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞")
         self.whatsapp_client.send_contact(
             to=user_number,
             contact=Contact(
