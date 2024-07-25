@@ -1,7 +1,7 @@
 from pywa import WhatsApp
 from pywa.types import Message, Button, CallbackButton, ButtonUrl, Contact
-from .storage import Storage
-from .database import Database
+from bot.services.storage import Storage
+from bot.services.database import Database
 import logging
 import time
 import requests
