@@ -122,7 +122,7 @@ class MessageHandler:
             # User has provided their role
             self.storage.set(user_number, 'role', user_input)
             self.tag_user(user_number)
-            self.send_message(user_number, "Obrigada pelas informações 😊. Como podemos te ajudar hoje?", buttons=[
+            self.send_message(user_number, "Obrigada pelas informações. 😊 Como podemos te ajudar hoje?", buttons=[
                 Button("Fazer um pedido", callback_data="Fazer um pedido"),
                 Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
             ])
@@ -290,7 +290,7 @@ class MessageHandler:
             product_list.append(f"45653364015381:{book_quantity}")
 
         products = ",".join(product_list)
-        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={name.split()[-1]}&checkout[shipping_address][phone]={user_number}"
+        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={'%20'.join(name.split()[1:])}&checkout[shipping_address][phone]={user_number}"
         shortened_checkout_url = self.shorten_url(checkout_url)
         self.send_message(user_number, f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos! ❤️🧚")
 
