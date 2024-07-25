@@ -135,12 +135,12 @@ class MessageHandler:
                 self.whatsapp_client.send_image(
                     to=user_number,
                     caption="Porta Dentinho de Leite",
-                    image="images/tabela_porta_dentinho.jpeg"
+                    image="assets/images/tabela_porta_dentinho.jpeg"
                 )
                 self.whatsapp_client.send_image(
                     to=user_number,
                     caption="Livro - Dentinho da Fada",
-                    image="images/tabela_livro.jpeg"
+                    image="assets/images/tabela_livro.jpeg"
                 )
                 self.send_message(user_number, "Vamos montar seu pedido!")
 
@@ -148,7 +148,7 @@ class MessageHandler:
 
                 self.whatsapp_client.send_sticker(
                     to=user_number,
-                    sticker="stickers/todos-os-produtos.webp",
+                    sticker="assets/stickers/todos-os-produtos.webp",
                     mime_type="image/webp"
                 )
 
@@ -209,7 +209,7 @@ class MessageHandler:
             if user_input == "Sim":
                 self.whatsapp_client.send_sticker(
                     to=user_number,
-                    sticker="stickers/livro-dentinho-da-fada.webp",
+                    sticker="assets/stickers/livro-dentinho-da-fada.webp",
                     mime_type="image/webp"
                 )
                 self.send_message(user_number, "Quantos livros *Dentinho da Fada* você gostaria? 📖?")
@@ -222,16 +222,16 @@ class MessageHandler:
         sticker_path = ""
         emoji_color = ""
         if color == "Rosa":
-            sticker_path = "stickers/porta-dente-rosa.webp"
+            sticker_path = "assets/stickers/porta-dente-rosa.webp"
             emoji_color = "🩷"
         elif color == "Azul":
-            sticker_path = "stickers/porta-dente-azul.webp"
+            sticker_path = "assets/stickers/porta-dente-azul.webp"
             emoji_color = "🔵"
         elif color == "Laranja":
-            sticker_path = "stickers/porta-dente-laranja.webp"
+            sticker_path = "assets/stickers/porta-dente-laranja.webp"
             emoji_color = "🟠"
         elif color == "Verde":
-            sticker_path = "stickers/porta-dente-verde.webp"
+            sticker_path = "assets/stickers/porta-dente-verde.webp"
             emoji_color = "🟢"
 
         self.whatsapp_client.send_sticker(
