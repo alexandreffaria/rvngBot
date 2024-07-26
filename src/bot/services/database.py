@@ -10,22 +10,23 @@ class Database:
     def create_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS messages
                                (id INTEGER PRIMARY KEY,
-                                user_id TEXT,
                                 sender TEXT,
+                                sender_phone TEXT,
+                                receiver TEXT,
+                                receiver_phone TEXT,
                                 message TEXT,
                                 timestamp TEXT)''')
         self.connection.commit()
 
-    def insert_message(self, user_id, sender, message, timestamp):
-        # Convert timestamp to ISO 8601 format if it's not already
+    def insert_message(self, sender, sender_phone, receiver, receiver_phone, message, timestamp):
         if isinstance(timestamp, (int, float)):
             timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        self.cursor.execute("INSERT INTO messages (user_id, sender, message, timestamp) VALUES (?, ?, ?, ?)",
-                            (user_id, sender, message, timestamp))
+        self.cursor.execute("INSERT INTO messages (sender, sender_phone, receiver, receiver_phone, message, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+                            (sender, sender_phone, receiver, receiver_phone, message, timestamp))
         self.connection.commit()
 
-    def fetch_messages(self, user_id):
-        self.cursor.execute("SELECT * FROM messages WHERE user_id=? ORDER BY timestamp", (user_id,))
+    def fetch_messages(self, sender_phone):
+        self.cursor.execute("SELECT * FROM messages WHERE sender_phone=? ORDER BY timestamp", (sender_phone,))
         return self.cursor.fetchall()
 
     def close(self):

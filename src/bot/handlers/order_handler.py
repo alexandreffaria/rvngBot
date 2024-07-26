@@ -1,6 +1,8 @@
 import logging
 import requests
 from pywa.types import Button, ButtonUrl
+from config.settings import ME
+import time
 
 class OrderHandler:
     def __init__(self, storage, whatsapp_client, database):
@@ -26,7 +28,9 @@ class OrderHandler:
             else:
                 self.ask_for_book(user_number)
         else:
-            self.whatsapp_client.send_message(user_number, "Por favor, insira um número válido para a quantidade.")
+            message = "Por favor, insira um número válido para a quantidade."
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', current_state)
 
     def handle_book_quantity(self, user_number, user_input):
@@ -35,7 +39,9 @@ class OrderHandler:
             self.storage.set(user_number, 'book_quantity', quantity)
             self.finalize_order(user_number)
         else:
-            self.whatsapp_client.send_message(user_number, "Por favor, insira um número válido para a quantidade de livros.")
+            message = "Por favor, insira um número válido para a quantidade de livros."
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', 'awaiting_book_quantity')
 
     def handle_pd_interest(self, user_number, user_input):
@@ -47,7 +53,9 @@ class OrderHandler:
     def handle_pd_response(self, user_number, current_state, user_input):
         color = current_state.split('_')[-1]
         if user_input == "Sim":
-            self.whatsapp_client.send_message(user_number, f"Quantos porta dente de leite *{color}* você gostaria?")
+            message = f"Quantos porta dente de leite *{color}* você gostaria?"
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', f'awaiting_pd_{color.lower()}_quantity')
         else:
             next_color = self.get_next_color(color)
@@ -63,7 +71,9 @@ class OrderHandler:
                 sticker="assets/stickers/livro-dentinho-da-fada.webp",
                 mime_type="image/webp"
             )
-            self.whatsapp_client.send_message(user_number, "Quantos livros *Dentinho da Fada* você gostaria? 📖?")
+            message = "Quantos livros *Dentinho da Fada* você gostaria? 📖?"
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', 'awaiting_book_quantity')
         else:
             self.finalize_order(user_number)
@@ -77,24 +87,28 @@ class OrderHandler:
             sticker=sticker_path,
             mime_type="image/webp"
         )
+        message = f"Você gostaria de comprar o porta dentinho *{color}*? {emoji_color}"
         self.whatsapp_client.send_message(
             user_number, 
-            f"Você gostaria de comprar o porta dentinho *{color}*? {emoji_color}",
+            message,
             buttons=[
                 Button("Sim", callback_data="Sim"),
                 Button("Não", callback_data="Não"),
         ])
+        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
         self.storage.set(user_number, f'state', f'awaiting_pd_{color.lower()}')
 
     def ask_for_book(self, user_number):
+        message = "Você gostaria de comprar o Livro - Dentinho da Fada?"
         self.whatsapp_client.send_message(
             user_number, 
-            "Você gostaria de comprar o Livro - Dentinho da Fada?",
+            message,
             buttons=[
                 Button("Sim", callback_data="Sim"),
                 Button("Não", callback_data="Não"),
             ]
         )
+        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
         self.storage.set(user_number, 'state', 'awaiting_book')
 
     def finalize_order(self, user_number):
@@ -109,7 +123,9 @@ class OrderHandler:
 
         # Check if any items were selected
         if pd_azul == '0' and pd_rosa == '0' and pd_verde == '0' and pd_laranja == '0' and book_quantity == '0':
-            self.whatsapp_client.send_message(user_number, "Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item.")
+            message = "Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item."
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', 'awaiting_pd_interest')
             return
 
@@ -131,20 +147,24 @@ class OrderHandler:
         products = ",".join(product_list)
         checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={'%20'.join(name.split()[1:])}&checkout[shipping_address][phone]={user_number}"
         shortened_checkout_url = self.shorten_url(checkout_url)
-        print(f"checkoutURL: {checkout_url}")
-        print(f"shortURL: {shortened_checkout_url}")
-        self.whatsapp_client.send_message(user_number, f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos! ❤️🧚")
+        
+        message = f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos! ❤️🧚"
+        self.whatsapp_client.send_message(user_number, message)
+        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
 
         # Send the checkout link to the user
+        message = f"🛒 Segue o link do seu pedido:"
         self.whatsapp_client.send_message(
             user_number, 
-            f"🛒 Segue o link do seu pedido:", 
+            message, 
             buttons=ButtonUrl(
                 title="Link de pagamento",
                 url=shortened_checkout_url,
             ),
             footer="A magia de cuidar dos dentinhos!"
         )
+        message = f"🛒 Segue o link do seu pedido: {shortened_checkout_url}"
+        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
 
         # Reset the states
         self.reset_user_state(user_number)

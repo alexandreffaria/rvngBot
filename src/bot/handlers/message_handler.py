@@ -5,6 +5,7 @@ from bot.services.database import Database
 from bot.handlers.email_handler import EmailHandler
 from bot.handlers.order_handler import OrderHandler
 from bot.handlers.state_handler import StateHandler
+from config.settings import ME
 import logging
 import time
 
@@ -25,7 +26,7 @@ class MessageHandler:
         logging.info(f"Received message from {user_number}: {user_input}")
 
         # Store the incoming message in the database
-        self.database.insert_message(user_number, "user", user_input, timestamp)
+        self.database.insert_message("user", user_number, "bot", ME, user_input, timestamp)
 
         # Check if the user wants to talk to a human
         if "atendente" in user_input.lower() or "humano" in user_input.lower() or "falar" in user_input.lower():
@@ -55,7 +56,7 @@ class MessageHandler:
         logging.info(f"Received callback from {user_number}: {user_input}")
 
         # Store the incoming callback data as a message
-        self.database.insert_message(user_number, "user", user_input, time.time())
+        self.database.insert_message("user", user_number, "bot", ME, user_input, time.time())
 
         # Get the current state of the user
         current_state = self.storage.get(user_number, 'state')
