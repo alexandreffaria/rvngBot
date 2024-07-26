@@ -8,18 +8,35 @@ class OrderHandler:
         self.whatsapp_client = whatsapp_client
         self.database = database
 
+    def validate_integer(self, user_input):
+        try:
+            value = int(user_input)
+            return True, value
+        except ValueError:
+            return False, None
+
     def handle_pd_quantity(self, user_number, current_state, user_input):
-        color = current_state.split('_')[-2]
-        self.storage.set(user_number, f'pd_{color}', user_input)
-        next_color = self.get_next_color(color)
-        if next_color:
-            self.ask_next_color(user_number, next_color)
+        is_valid, quantity = self.validate_integer(user_input)
+        if is_valid:
+            color = current_state.split('_')[-2]
+            self.storage.set(user_number, f'pd_{color}', quantity)
+            next_color = self.get_next_color(color)
+            if next_color:
+                self.ask_next_color(user_number, next_color)
+            else:
+                self.ask_for_book(user_number)
         else:
-            self.ask_for_book(user_number)
+            self.whatsapp_client.send_message(user_number, "Por favor, insira um número válido para a quantidade.")
+            self.storage.set(user_number, 'state', current_state)
 
     def handle_book_quantity(self, user_number, user_input):
-        self.storage.set(user_number, 'book_quantity', user_input)
-        self.finalize_order(user_number)
+        is_valid, quantity = self.validate_integer(user_input)
+        if is_valid:
+            self.storage.set(user_number, 'book_quantity', quantity)
+            self.finalize_order(user_number)
+        else:
+            self.whatsapp_client.send_message(user_number, "Por favor, insira um número válido para a quantidade de livros.")
+            self.storage.set(user_number, 'state', 'awaiting_book_quantity')
 
     def handle_pd_interest(self, user_number, user_input):
         if user_input == "Sim":
