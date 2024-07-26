@@ -28,7 +28,7 @@ class MessageHandler:
         self.database.insert_message(user_number, "user", user_input, timestamp)
 
         # Check if the user wants to talk to a human
-        if "atendente" in user_input or "humano" in user_input or "falar" in user_input:
+        if "atendente" in user_input.lower() or "humano" in user_input.lower() or "falar" in user_input.lower():
             self.state_handler.handle_human_request(user_number)
             self.storage.set(user_number, 'state', None)
             return
