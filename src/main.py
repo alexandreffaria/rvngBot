@@ -2,7 +2,7 @@ from pywa import WhatsApp
 from pywa.types import Message, CallbackButton
 from fastapi import FastAPI
 import uvicorn
-from config.settings import PHONE_ID, TOKEN, CALLBACK_URL, VERIFY_TOKEN, APP_ID, APP_SECRET, ME
+from config.settings import PHONE_ID, TOKEN, CALLBACK_URL, VERIFY_TOKEN, APP_ID, APP_SECRET
 from bot.handlers.message_handler import MessageHandler
 import logging
 
