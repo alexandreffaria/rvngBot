@@ -62,7 +62,7 @@ class StateHandler:
                 to=user_number,
                 contact=Contact(
                     name=Contact.Name(formatted_name='Dentinho da Fada', first_name='Dentinho da Fada'),
-                    phones=[Contact.Phone(phone='553184161141', type='MAIN')],
+                    phones=[Contact.Phone(phone="553184161141", type='WORK', wa_id="553184161141")],
                     emails=[Contact.Email(email='vendas@dentinhodafada.com.br', type='WORK')],
                     urls=[Contact.Url(url='https://dentinhodafada.com.br', type='WORK')],
                 )
@@ -75,7 +75,7 @@ class StateHandler:
             to=user_number,
             contact=Contact(
                 name=Contact.Name(formatted_name='Dentinho da Fada', first_name='Dentinho da Fada'),
-                phones=[Contact.Phone(phone='553184161141', type='MAIN')],
+                phones=[Contact.Phone(phone="553184161141", type='WORK', wa_id="553184161141")],
                 emails=[Contact.Email(email='vendas@dentinhodafada.com.br', type='WORK')],
                 urls=[Contact.Url(url='https://dentinhodafada.com.br', type='WORK')],
             )
