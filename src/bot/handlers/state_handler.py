@@ -10,7 +10,6 @@ class StateHandler:
         self.database = database
 
     def initial_interaction(self, user_number):
-        print(ME)
         message = "Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?"
         self.whatsapp_client.send_message(user_number, message)
         self.database.insert_message("bot", ME, "user", user_number, message, time.time())
@@ -33,6 +32,14 @@ class StateHandler:
         ])
         self.database.insert_message("bot", ME, "user", user_number, message, time.time())
         self.storage.set(user_number, 'state', 'awaiting_help_type')
+
+    def tag_user(self, user_number):
+        name = self.storage.get(user_number, 'name')
+        email = self.storage.get(user_number, 'email')
+        role = self.storage.get(user_number, 'role')
+        user_id = self.database.insert_user(user_number, name=name, email=email, role=role)
+        self.database.insert_message(user_id, "bot", ME, user_number, role, time.time())
+        logging.info(f"Tagging user {user_number}: Name={name}, Email={email}, Role={role}")
 
     def handle_help_type(self, user_number, user_input):
         if user_input == "Fazer um pedido":
@@ -97,11 +104,3 @@ class StateHandler:
                 urls=[Contact.Url(url='https://dentinhodafada.com.br', type='WORK')],
             )
         )
-
-    def tag_user(self, user_number):
-        name = self.storage.get(user_number, 'name')
-        email = self.storage.get(user_number, 'email')
-        role = self.storage.get(user_number, 'role')
-        self.database.insert_message("bot", ME, "user", user_number, role, time.time())
-        # Here you can implement tagging logic, e.g., save to database or CRM
-        logging.info(f"Tagging user {user_number}: Name={name}, Email={email}, Role={role}")
