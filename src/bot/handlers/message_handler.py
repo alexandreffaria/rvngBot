@@ -25,8 +25,11 @@ class MessageHandler:
 
         logging.info(f"Received message from {user_number}: {user_input}")
 
+        # Get the user_id from storage
+        user_id = self.storage.get(user_number, 'user_id')
+
         # Store the incoming message in the database
-        self.database.insert_message("user", user_number, "bot", ME, user_input, timestamp)
+        self.database.insert_message(user_id, "user", user_number, "bot", ME, user_input, timestamp)
 
         # Check if the user wants to talk to a human
         if "atendente" in user_input.lower() or "humano" in user_input.lower() or "falar" in user_input.lower():
@@ -52,11 +55,12 @@ class MessageHandler:
     def handle_callback_button(self, callback_button: CallbackButton):
         user_number = callback_button.from_user.wa_id
         user_input = callback_button.data
+        user_id = self.storage.get(user_number, 'user_id')
 
         logging.info(f"Received callback from {user_number}: {user_input}")
 
         # Store the incoming callback data as a message
-        self.database.insert_message("user", user_number, "bot", ME, user_input, time.time())
+        self.database.insert_message(user_id, "user", user_number, "bot", ME, user_input, time.time())
 
         # Get the current state of the user
         current_state = self.storage.get(user_number, 'state')

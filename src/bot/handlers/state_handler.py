@@ -12,25 +12,37 @@ class StateHandler:
     def initial_interaction(self, user_number):
         message = "Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?"
         self.whatsapp_client.send_message(user_number, message)
-        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+
+        user_id = self.database.insert_user(phone=user_number)
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+        self.storage.set(user_number, 'user_id', user_id)
         self.storage.set(user_number, 'state', 'awaiting_name')
 
     def handle_name(self, user_number, user_input):
         self.storage.set(user_number, 'name', user_input)
         message = f"Muito obrigada, {user_input.split(' ')[0].capitalize()}. E qual o seu email?"
         self.whatsapp_client.send_message(user_number, message)
-        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+        
+        # Update the user with the name
+        user_id = self.storage.get(user_number, 'user_id')
+        self.database.update_user(user_id, name=user_input)
+        
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
         self.storage.set(user_number, 'state', 'awaiting_email')
 
     def handle_role(self, user_number, user_input):
         self.storage.set(user_number, 'role', user_input)
-        self.tag_user(user_number)
+        user_id = self.storage.get(user_number, 'user_id')
+        
+        # Update the user with the role
+        self.database.update_user(user_id, role=user_input)
+        
         message = "Obrigada pelas informações. 😊 Como podemos te ajudar hoje?"
         self.whatsapp_client.send_message(user_number, message, buttons=[
             Button("Fazer um pedido", callback_data="Fazer um pedido"),
             Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
         ])
-        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
         self.storage.set(user_number, 'state', 'awaiting_help_type')
 
     def tag_user(self, user_number):
@@ -43,9 +55,10 @@ class StateHandler:
 
     def handle_help_type(self, user_number, user_input):
         if user_input == "Fazer um pedido":
+            user_id = self.storage.get(user_number, 'user_id')
             message = "Temos condições especiais para você, olha só!"
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
             
             self.whatsapp_client.send_image(
                 to=user_number,
@@ -59,7 +72,7 @@ class StateHandler:
             )
             message = "Vamos montar seu pedido!"
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
 
             time.sleep(3)
 
@@ -73,13 +86,13 @@ class StateHandler:
                     Button("Sim", callback_data="Sim"),
                     Button("Não", callback_data="Não"),
                 ])
-            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', 'awaiting_pd_interest')
 
         elif user_input == "Tirar dúvidas":
             message = "No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞"
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
             self.whatsapp_client.send_contact(
                 to=user_number,
                 contact=Contact(
@@ -93,8 +106,9 @@ class StateHandler:
 
     def handle_human_request(self, user_number):
         message = "No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞"
+        user_id = self.storage.get(user_number, 'user_id')
         self.whatsapp_client.send_message(user_number, message)
-        self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+        self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
         self.whatsapp_client.send_contact(
             to=user_number,
             contact=Contact(

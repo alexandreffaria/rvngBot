@@ -23,12 +23,17 @@ class EmailHandler:
                     Button("Outros", callback_data="Outros"),
                 ]
             )
-            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+            
+            # Update the user with the email
+            user_id = self.storage.get(user_number, 'user_id')
+            self.database.update_user(user_id, email=result)
+            
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', 'awaiting_role')
         else:
             message = "Hm, isso não parece um email válido. 🤔 Vamos tentar de novo?"
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message("bot", ME, "user", user_number, message, time.time())
+            self.database.insert_message(None, "bot", ME, "user", user_number, message, time.time())
             self.storage.set(user_number, 'state', 'awaiting_email')
 
     def validate_email_address(self, email):
