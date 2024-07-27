@@ -54,8 +54,8 @@ class StateHandler:
         logging.info(f"Tagging user {user_number}: Name={name}, Email={email}, Role={role}")
 
     def handle_help_type(self, user_number, user_input):
+        user_id = self.storage.get(user_number, 'user_id')
         if user_input == "Fazer um pedido":
-            user_id = self.storage.get(user_number, 'user_id')
             message = "Temos condições especiais para você, olha só!"
             self.whatsapp_client.send_message(user_number, message)
             self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
@@ -91,6 +91,7 @@ class StateHandler:
 
         elif user_input == "Tirar dúvidas":
             message = "No momento esse número não tem atendimento, por favor entre em contato com a gente no contato abaixo! 📞"
+            user_id = self.storage.get(user_number, 'user_id')
             self.whatsapp_client.send_message(user_number, message)
             self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
             self.whatsapp_client.send_contact(
