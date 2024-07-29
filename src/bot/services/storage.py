@@ -1,11 +1,9 @@
 class Storage:
-    def __init__(self):
-        self.data = {}
+    def __init__(self, database):
+        self.database = database
 
     def set(self, user_id, key, value):
-        if user_id not in self.data:
-            self.data[user_id] = {}
-        self.data[user_id][key] = value
+        self.database.set_storage_data(user_id, key, value)
 
     def get(self, user_id, key, default=None):
-        return self.data.get(user_id, {}).get(key, default)
+        return self.database.get_storage_data(user_id, key, default)

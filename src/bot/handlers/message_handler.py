@@ -1,6 +1,5 @@
 from pywa import WhatsApp
 from pywa.types import Message, CallbackButton
-from bot.services.storage import Storage
 from bot.services.database import Database
 from bot.handlers.email_handler import EmailHandler
 from bot.handlers.order_handler import OrderHandler
@@ -12,11 +11,10 @@ import time
 class MessageHandler:
     def __init__(self, whatsapp_client: WhatsApp):
         self.whatsapp_client = whatsapp_client
-        self.storage = Storage()
         self.database = Database()
-        self.email_handler = EmailHandler(self.storage, self.whatsapp_client, self.database)
-        self.order_handler = OrderHandler(self.storage, self.whatsapp_client, self.database)
-        self.state_handler = StateHandler(self.storage, self.whatsapp_client, self.database)
+        self.email_handler = EmailHandler(self.whatsapp_client, self.database)
+        self.order_handler = OrderHandler(self.whatsapp_client, self.database)
+        self.state_handler = StateHandler(self.whatsapp_client, self.database)
 
     def handle_message(self, message: Message):
         user_number = message.from_user.wa_id
@@ -25,8 +23,8 @@ class MessageHandler:
 
         logging.info(f"Received message from {user_number}: {user_input}")
 
-        # Get the user_id from storage
-        user_id = self.storage.get(user_number, 'user_id')
+        # Get the user_id from the database
+        user_id = self.database.insert_user(user_number)
 
         # Store the incoming message in the database
         self.database.insert_message(user_id, "user", user_number, "bot", ME, user_input, timestamp)
@@ -34,11 +32,11 @@ class MessageHandler:
         # Check if the user wants to talk to a human
         if "atendente" in user_input.lower() or "humano" in user_input.lower() or "falar" in user_input.lower():
             self.state_handler.handle_human_request(user_number)
-            self.storage.set(user_number, 'state', None)
+            self.database.set_state(user_id, 'state', None)
             return
 
         # Get the current state of the user
-        current_state = self.storage.get(user_number, 'state')
+        current_state = self.database.get_state(user_id, 'state')
         logging.info(f"Current state for {user_number}: {current_state}")
 
         if current_state is None:
@@ -55,7 +53,7 @@ class MessageHandler:
     def handle_callback_button(self, callback_button: CallbackButton):
         user_number = callback_button.from_user.wa_id
         user_input = callback_button.data
-        user_id = self.storage.get(user_number, 'user_id')
+        user_id = self.database.insert_user(user_number)
 
         logging.info(f"Received callback from {user_number}: {user_input}")
 
@@ -63,7 +61,7 @@ class MessageHandler:
         self.database.insert_message(user_id, "user", user_number, "bot", ME, user_input, time.time())
 
         # Get the current state of the user
-        current_state = self.storage.get(user_number, 'state')
+        current_state = self.database.get_state(user_id, 'state')
         logging.info(f"Current state for {user_number}: {current_state}")
 
         if current_state == 'awaiting_role':

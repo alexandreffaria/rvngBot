@@ -5,8 +5,7 @@ from config.settings import ME
 import time
 
 class OrderHandler:
-    def __init__(self, storage, whatsapp_client, database):
-        self.storage = storage
+    def __init__(self, whatsapp_client, database):
         self.whatsapp_client = whatsapp_client
         self.database = database
 
@@ -18,11 +17,11 @@ class OrderHandler:
             return False, None
 
     def handle_pd_quantity(self, user_number, current_state, user_input):
-        user_id = self.storage.get(user_number, 'user_id')
+        user_id = self.database.insert_user(user_number)
         is_valid, quantity = self.validate_integer(user_input)
         if is_valid:
             color = current_state.split('_')[-2]
-            self.storage.set(user_number, f'pd_{color}', quantity)
+            self.database.set_state(user_id, f'pd_{color}', quantity)
             next_color = self.get_next_color(color)
             if next_color:
                 self.ask_next_color(user_number, next_color)
@@ -31,35 +30,36 @@ class OrderHandler:
         else:
             message = "Por favor, insira um número válido para a quantidade."
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-            self.storage.set(user_number, 'state', current_state)
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.database.set_state(user_id, 'state', current_state)
 
     def handle_book_quantity(self, user_number, user_input):
-        user_id = self.storage.get(user_number, 'user_id')
+        user_id = self.database.insert_user(user_number)
         is_valid, quantity = self.validate_integer(user_input)
         if is_valid:
-            self.storage.set(user_number, 'book_quantity', quantity)
+            self.database.set_state(user_id, 'book_quantity', quantity)
             self.finalize_order(user_number)
         else:
             message = "Por favor, insira um número válido para a quantidade de livros."
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-            self.storage.set(user_number, 'state', 'awaiting_book_quantity')
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.database.set_state(user_id, 'state', 'awaiting_book_quantity')
 
     def handle_pd_interest(self, user_number, user_input):
+        user_id = self.database.insert_user(user_number)
         if user_input == "Sim":
             self.ask_next_color(user_number, 'Rosa')
         else:
             self.ask_for_book(user_number)
 
     def handle_pd_response(self, user_number, current_state, user_input):
+        user_id = self.database.insert_user(user_number)
         color = current_state.split('_')[-1]
-        user_id = self.storage.get(user_number, 'user_id')
         if user_input == "Sim":
             message = f"Quantos porta dente de leite *{color}* você gostaria?"
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-            self.storage.set(user_number, 'state', f'awaiting_pd_{color.lower()}_quantity')
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.database.set_state(user_id, 'state', f'awaiting_pd_{color.lower()}_quantity')
         else:
             next_color = self.get_next_color(color)
             if next_color:
@@ -68,7 +68,7 @@ class OrderHandler:
                 self.ask_for_book(user_number)
 
     def handle_book_response(self, user_number, user_input):
-        user_id = self.storage.get(user_number, 'user_id')
+        user_id = self.database.insert_user(user_number)
         if user_input == "Sim":
             self.whatsapp_client.send_sticker(
                 to=user_number,
@@ -77,15 +77,15 @@ class OrderHandler:
             )
             message = "Quantos livros *Dentinho da Fada* você gostaria? 📖"
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-            self.storage.set(user_number, 'state', 'awaiting_book_quantity')
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.database.set_state(user_id, 'state', 'awaiting_book_quantity')
         else:
             self.finalize_order(user_number)
 
     def ask_next_color(self, user_number, color):
+        user_id = self.database.insert_user(user_number)
         sticker_path = self.get_sticker_path(color)
         emoji_color = self.get_emoji_color(color)
-        user_id = self.storage.get(user_number, 'user_id')
 
         self.whatsapp_client.send_sticker(
             to=user_number,
@@ -100,11 +100,11 @@ class OrderHandler:
                 Button("Sim", callback_data="Sim"),
                 Button("Não", callback_data="Não"),
         ])
-        self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-        self.storage.set(user_number, f'state', f'awaiting_pd_{color.lower()}')
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+        self.database.set_state(user_id, 'state', f'awaiting_pd_{color.lower()}')
 
     def ask_for_book(self, user_number):
-        user_id = self.storage.get(user_number, 'user_id')
+        user_id = self.database.insert_user(user_number)
         message = "Você gostaria de comprar o Livro - Dentinho da Fada?"
         self.whatsapp_client.send_message(
             user_number, 
@@ -114,26 +114,26 @@ class OrderHandler:
                 Button("Não", callback_data="Não"),
             ]
         )
-        self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-        self.storage.set(user_number, 'state', 'awaiting_book')
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+        self.database.set_state(user_id, 'state', 'awaiting_book')
 
     def finalize_order(self, user_number):
+        user_id = self.database.insert_user(user_number)
         # Gather all the necessary information
-        pd_azul = self.storage.get(user_number, 'pd_azul', '0')
-        pd_rosa = self.storage.get(user_number, 'pd_rosa', '0')
-        pd_verde = self.storage.get(user_number, 'pd_verde', '0')
-        pd_laranja = self.storage.get(user_number, 'pd_laranja', '0')
-        book_quantity = self.storage.get(user_number, 'book_quantity', '0')
-        email = self.storage.get(user_number, 'email')
-        name = self.storage.get(user_number, 'name')
-        user_id = self.storage.get(user_number, 'user_id')
+        pd_azul = self.database.get_state(user_id, 'pd_azul', '0')
+        pd_rosa = self.database.get_state(user_id, 'pd_rosa', '0')
+        pd_verde = self.database.get_state(user_id, 'pd_verde', '0')
+        pd_laranja = self.database.get_state(user_id, 'pd_laranja', '0')
+        book_quantity = self.database.get_state(user_id, 'book_quantity', '0')
+        email = self.database.get_state(user_id, 'email')
+        name = self.database.get_state(user_id, 'name')
 
         # Check if any items were selected
         if pd_azul == '0' and pd_rosa == '0' and pd_verde == '0' and pd_laranja == '0' and book_quantity == '0':
             message = "Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item."
             self.whatsapp_client.send_message(user_number, message)
-            self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
-            self.storage.set(user_number, 'state', 'awaiting_pd_interest')
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.database.set_state(user_id, 'state', 'awaiting_pd_interest')
             return
 
         # Create the link dynamically
@@ -157,7 +157,7 @@ class OrderHandler:
         
         message = f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos! ❤️🧚"
         self.whatsapp_client.send_message(user_number, message)
-        self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
 
         # Send the checkout link to the user
         message = f"🛒 Segue o link do seu pedido:"
@@ -171,7 +171,7 @@ class OrderHandler:
             footer="A magia de cuidar dos dentinhos!"
         )
         message = f"🛒 Segue o link do seu pedido: {shortened_checkout_url}"
-        self.database.insert_message(user_id,"bot", ME, "user", user_number, message, time.time())
+        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
 
         # Reset the states
         self.reset_user_state(user_number)
@@ -200,12 +200,13 @@ class OrderHandler:
         return emojis[color_capitalized]
 
     def reset_user_state(self, user_number):
-        self.storage.set(user_number, 'pd_azul', '0')
-        self.storage.set(user_number, 'pd_rosa', '0')
-        self.storage.set(user_number, 'pd_verde', '0')
-        self.storage.set(user_number, 'pd_laranja', '0')
-        self.storage.set(user_number, 'book_quantity', '0')
-        self.storage.set(user_number, 'state', None)
+        user_id = self.database.insert_user(user_number)
+        self.database.delete_state(user_id, 'pd_azul')
+        self.database.delete_state(user_id, 'pd_rosa')
+        self.database.delete_state(user_id, 'pd_verde')
+        self.database.delete_state(user_id, 'pd_laranja')
+        self.database.delete_state(user_id, 'book_quantity')
+        self.database.set_state(user_id, 'state', None)
 
     def shorten_url(self, long_url):
         url = "https://url-shortener-service.p.rapidapi.com/shorten"

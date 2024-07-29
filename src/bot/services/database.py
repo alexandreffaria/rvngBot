@@ -12,8 +12,8 @@ class Database:
         )
         self.cursor = self.connection.cursor()
         self.create_users_table()
-        self.create_table()
-        
+        self.create_messages_table()
+        self.create_state_table()
 
     def create_users_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
@@ -24,7 +24,7 @@ class Database:
                                 role VARCHAR(255))''')
         self.connection.commit()
 
-    def create_table(self):
+    def create_messages_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS messages
                             (id INT AUTO_INCREMENT PRIMARY KEY,
                                 user_id INT,
@@ -34,6 +34,14 @@ class Database:
                                 receiver_phone VARCHAR(255),
                                 message TEXT,
                                 timestamp DATETIME,
+                                FOREIGN KEY (user_id) REFERENCES users(id))''')
+        self.connection.commit()
+
+    def create_state_table(self):
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS state
+                               (user_id INT PRIMARY KEY,
+                                state_key VARCHAR(255),
+                                state_value TEXT,
                                 FOREIGN KEY (user_id) REFERENCES users(id))''')
         self.connection.commit()
 
@@ -70,4 +78,20 @@ class Database:
         params.append(user_id)
         
         self.cursor.execute(query, tuple(params))
+        self.connection.commit()
+
+    def set_state(self, user_id, key, value):
+        self.cursor.execute('''INSERT INTO state (user_id, state_key, state_value) 
+                            VALUES (%s, %s, %s) 
+                            ON DUPLICATE KEY UPDATE state_value=VALUES(state_value)''',
+                            (user_id, key, value))
+        self.connection.commit()
+
+    def get_state(self, user_id, key, default=None):
+        self.cursor.execute('SELECT state_value FROM state WHERE user_id=%s AND state_key=%s', (user_id, key))
+        result = self.cursor.fetchone()
+        return result[0] if result else default
+
+    def delete_state(self, user_id, key):
+        self.cursor.execute('DELETE FROM state WHERE user_id=%s AND state_key=%s', (user_id, key))
         self.connection.commit()
