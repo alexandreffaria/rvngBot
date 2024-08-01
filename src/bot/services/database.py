@@ -46,14 +46,38 @@ class Database:
         self.connection.commit()
 
     def insert_user(self, phone, name=None, email=None, role=None):
-        self.cursor.execute('''INSERT INTO users (phone, name, email, role) 
-                            VALUES (%s, %s, %s, %s) 
-                            ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email), role=VALUES(role)''',
-                            (phone, name, email, role))
-        self.connection.commit()
-        self.cursor.execute('SELECT id FROM users WHERE phone=%s', (phone,))
-        user_id = self.cursor.fetchone()[0]
+        self.cursor.execute('SELECT id, name, email, role FROM users WHERE phone=%s', (phone,))
+        user = self.cursor.fetchone()
+        
+        if user:
+            user_id, current_name, current_email, current_role = user
+            updates = []
+            params = []
+            
+            if name and name != current_name:
+                updates.append("name=%s")
+                params.append(name)
+            if email and email != current_email:
+                updates.append("email=%s")
+                params.append(email)
+            if role and role != current_role:
+                updates.append("role=%s")
+                params.append(role)
+            
+            if updates:
+                update_query = "UPDATE users SET " + ", ".join(updates) + " WHERE phone=%s"
+                params.append(phone)
+                self.cursor.execute(update_query, tuple(params))
+                self.connection.commit()
+        else:
+            self.cursor.execute('''INSERT INTO users (phone, name, email, role) 
+                                VALUES (%s, %s, %s, %s)''',
+                                (phone, name, email, role))
+            self.connection.commit()
+            user_id = self.cursor.lastrowid
+        
         return user_id
+
 
     def insert_message(self, user_id, sender, sender_phone, receiver, receiver_phone, message, timestamp):
         if isinstance(timestamp, (int, float)):
