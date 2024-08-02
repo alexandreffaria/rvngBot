@@ -1,5 +1,5 @@
 import mysql.connector
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 class Database:
@@ -127,3 +127,17 @@ class Database:
         result = cursor.fetchone()
         cursor.close()
         return result
+    
+    def get_last_interaction(self, user_id):
+        self.cursor.execute('SELECT timestamp FROM messages WHERE user_id=%s ORDER BY timestamp DESC LIMIT 1', (user_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else None
+
+    def reset_user_state_if_needed(self, user_id):
+        last_interaction = self.get_last_interaction(user_id)
+        if last_interaction:
+            print(f"lastInteraction: {last_interaction}")
+            time_diff = datetime.now() - last_interaction
+            print(f"timeDiff: {time_diff}")
+            if time_diff > timedelta(minutes=25):
+                self.set_state(user_id, 'state', None)

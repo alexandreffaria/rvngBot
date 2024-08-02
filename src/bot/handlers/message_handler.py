@@ -26,6 +26,8 @@ class MessageHandler:
         # Get the user_id from the database
         user_id = self.database.insert_user(user_number)
 
+        self.database.reset_user_state_if_needed(user_id)
+
         # Store the incoming message in the database
         self.database.insert_message(user_id, "user", user_number, "bot", ME, user_input, timestamp)
 
