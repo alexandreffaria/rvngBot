@@ -119,3 +119,11 @@ class Database:
     def delete_state(self, user_id, key):
         self.cursor.execute('DELETE FROM state WHERE user_id=%s AND state_key=%s', (user_id, key))
         self.connection.commit()
+
+    def get_user_by_phone(self, phone):
+        cursor = self.connection.cursor(dictionary=True)
+        query = "SELECT * FROM users WHERE phone = %s"
+        cursor.execute(query, (phone,))
+        result = cursor.fetchone()
+        cursor.close()
+        return result
