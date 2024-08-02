@@ -1,7 +1,7 @@
 import logging
 import requests
 from pywa.types import Button, ButtonUrl
-from config.settings import ME
+from config.settings import ME, SHORT_IO_API_KEY
 import time
 
 class OrderHandler:
@@ -21,7 +21,7 @@ class OrderHandler:
         is_valid, quantity = self.validate_integer(user_input)
         if is_valid:
             color = current_state.split('_')[-2]
-            self.database.set_state(user_id, f'pd_{color}', quantity)
+            self.database.insert_or_update_product_amount(user_id, f'pd_{color}', quantity)
             next_color = self.get_next_color(color)
             if next_color:
                 self.ask_next_color(user_number, next_color)
@@ -37,7 +37,7 @@ class OrderHandler:
         user_id = self.database.insert_user(user_number)
         is_valid, quantity = self.validate_integer(user_input)
         if is_valid:
-            self.database.set_state(user_id, 'book_quantity', quantity)
+            self.database.insert_or_update_product_amount(user_id, 'book', quantity)
             self.finalize_order(user_number)
         else:
             message = "Por favor, insira um número válido para a quantidade de livros."
@@ -46,7 +46,6 @@ class OrderHandler:
             self.database.set_state(user_id, 'state', 'awaiting_book_quantity')
 
     def handle_pd_interest(self, user_number, user_input):
-        user_id = self.database.insert_user(user_number)
         if user_input == "Sim":
             self.ask_next_color(user_number, 'Rosa')
         else:
@@ -119,17 +118,23 @@ class OrderHandler:
 
     def finalize_order(self, user_number):
         user_id = self.database.insert_user(user_number)
-        # Gather all the necessary information
-        pd_azul = self.database.get_state(user_id, 'pd_azul', '0')
-        pd_rosa = self.database.get_state(user_id, 'pd_rosa', '0')
-        pd_verde = self.database.get_state(user_id, 'pd_verde', '0')
-        pd_laranja = self.database.get_state(user_id, 'pd_laranja', '0')
-        book_quantity = self.database.get_state(user_id, 'book_quantity', '0')
-        email = self.database.get_state(user_id, 'email')
-        name = self.database.get_state(user_id, 'name')
+        user_details = self.database.get_user_by_phone(user_number)
+
+        # Retrieve product amounts from the database
+        product_amounts = self.database.get_product_amounts(user_id)
+        product_dict = {item[0]: item[1] for item in product_amounts}
+
+        pd_azul = product_dict.get('pd_azul', 0)
+        pd_rosa = product_dict.get('pd_rosa', 0)
+        pd_verde = product_dict.get('pd_verde', 0)
+        pd_laranja = product_dict.get('pd_laranja', 0)
+        book_quantity = product_dict.get('book', 0)
+
+        email = user_details['email']
+        name =  user_details['name']
 
         # Check if any items were selected
-        if pd_azul == '0' and pd_rosa == '0' and pd_verde == '0' and pd_laranja == '0' and book_quantity == '0':
+        if pd_azul == 0 and pd_rosa == 0 and pd_verde == 0 and pd_laranja == 0 and book_quantity == 0:
             message = "Você não selecionou nenhum item para finalizar o pedido. Por favor, selecione pelo menos um item."
             self.whatsapp_client.send_message(user_number, message)
             self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
@@ -152,19 +157,19 @@ class OrderHandler:
         base_url = "https://loja.dentinhodafada.com.br/cart/"
         product_list = []
 
-        if pd_azul != '0':
+        if pd_azul != 0:
             product_list.append(f"48281127977237:{pd_azul}")
-        if pd_rosa != '0':
+        if pd_rosa != 0:
             product_list.append(f"48281127944469:{pd_rosa}")
-        if pd_verde != '0':
+        if pd_verde != 0:
             product_list.append(f"48281128010005:{pd_verde}")
-        if pd_laranja != '0':
+        if pd_laranja != 0:
             product_list.append(f"48281128042773:{pd_laranja}")
-        if book_quantity != '0':
+        if book_quantity != 0:
             product_list.append(f"45653364015381:{book_quantity}")
 
         products = ",".join(product_list)
-        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split()[0]}&checkout[shipping_address][last_name]={'%20'.join(name.split()[1:])}&checkout[shipping_address][phone]={user_number}"
+        checkout_url = f"{base_url}{products}?checkout[email]={email}&checkout[shipping_address][first_name]={name.split(' ')[0]}&checkout[shipping_address][last_name]={'%20'.join(name.split()[1:])}&checkout[shipping_address][phone]={user_number}"
         shortened_checkout_url = self.shorten_url(checkout_url)
         
         message = f"{name.split()[0].capitalize()}, agradecemos muito sua confiança e esperamos que você adore nossos produtos! ❤️🧚"
@@ -213,25 +218,27 @@ class OrderHandler:
 
     def reset_user_state(self, user_number):
         user_id = self.database.insert_user(user_number)
-        self.database.delete_state(user_id, 'pd_azul')
-        self.database.delete_state(user_id, 'pd_rosa')
-        self.database.delete_state(user_id, 'pd_verde')
-        self.database.delete_state(user_id, 'pd_laranja')
-        self.database.delete_state(user_id, 'book_quantity')
+        self.database.insert_or_update_product_amount(user_id, 'pd_azul', 0)
+        self.database.insert_or_update_product_amount(user_id, 'pd_rosa', 0)
+        self.database.insert_or_update_product_amount(user_id, 'pd_verde', 0)
+        self.database.insert_or_update_product_amount(user_id, 'pd_laranja', 0)
+        self.database.insert_or_update_product_amount(user_id, 'book', 0)
         self.database.set_state(user_id, 'state', None)
 
     def shorten_url(self, long_url):
-        url = "https://url-shortener-service.p.rapidapi.com/shorten"
-        payload = f"-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"url\"\r\n\r\n{long_url}\r\n-----011000010111000001101001--\r\n\r\n"
-        headers = {
-            "x-rapidapi-key": "94442fdf41msh063434b9eadbca4p10158fjsn2df90fa67770",
-            "x-rapidapi-host": "url-shortener-service.p.rapidapi.com",
-            "Content-Type": "multipart/form-data; boundary=---011000010111000001101001"
+        url = "https://api.short.io/links"
+        payload = {
+            "domain": "short.redandblue.vip",
+            "originalURL": long_url
         }
-
-        response = requests.post(url, data=payload, headers=headers)
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "Authorization": SHORT_IO_API_KEY
+        }
+        response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
-            return response.json().get("result_url")
+            return response.json().get("secureShortURL")
         else:
             logging.error(f"Failed to shorten URL: {response.text}")
             return long_url

@@ -14,6 +14,7 @@ class Database:
         self.create_users_table()
         self.create_messages_table()
         self.create_state_table()
+        self.create_product_amounts_table()
 
     def create_users_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
@@ -44,6 +45,19 @@ class Database:
                                 state_value TEXT,
                                 FOREIGN KEY (user_id) REFERENCES users(id))''')
         self.connection.commit()
+
+    def create_product_amounts_table(self):
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS product_amounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_name VARCHAR(255),
+                amount INT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        self.connection.commit()
+
 
     def insert_user(self, phone, name=None, email=None, role=None):
         self.cursor.execute('SELECT id, name, email, role FROM users WHERE phone=%s', (phone,))
@@ -136,8 +150,18 @@ class Database:
     def reset_user_state_if_needed(self, user_id):
         last_interaction = self.get_last_interaction(user_id)
         if last_interaction:
-            print(f"lastInteraction: {last_interaction}")
             time_diff = datetime.now() - last_interaction
-            print(f"timeDiff: {time_diff}")
             if time_diff > timedelta(minutes=25):
                 self.set_state(user_id, 'state', None)
+
+    def insert_or_update_product_amount(self, user_id, product_name, amount):
+        self.cursor.execute('''
+            INSERT INTO product_amounts (user_id, product_name, amount)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE amount=VALUES(amount)
+        ''', (user_id, product_name, amount))
+        self.connection.commit()
+
+    def get_product_amounts(self, user_id):
+        self.cursor.execute('SELECT product_name, amount FROM product_amounts WHERE user_id=%s', (user_id,))
+        return self.cursor.fetchall()
