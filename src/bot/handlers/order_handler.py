@@ -191,6 +191,7 @@ class OrderHandler:
         self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
 
         # Reset the states
+        
         self.reset_user_state(user_number)
 
     def get_next_color(self, current_color):
@@ -218,11 +219,7 @@ class OrderHandler:
 
     def reset_user_state(self, user_number):
         user_id = self.database.insert_user(user_number)
-        self.database.insert_or_update_product_amount(user_id, 'pd_azul', 0)
-        self.database.insert_or_update_product_amount(user_id, 'pd_rosa', 0)
-        self.database.insert_or_update_product_amount(user_id, 'pd_verde', 0)
-        self.database.insert_or_update_product_amount(user_id, 'pd_laranja', 0)
-        self.database.insert_or_update_product_amount(user_id, 'book', 0)
+        self.database.delete_product_amounts(user_id)
         self.database.set_state(user_id, 'state', None)
 
     def shorten_url(self, long_url):

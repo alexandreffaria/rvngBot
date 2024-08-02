@@ -165,3 +165,7 @@ class Database:
     def get_product_amounts(self, user_id):
         self.cursor.execute('SELECT product_name, amount FROM product_amounts WHERE user_id=%s', (user_id,))
         return self.cursor.fetchall()
+    
+    def delete_product_amounts(self, user_id):
+        self.cursor.execute('DELETE FROM product_amounts WHERE user_id=%s', (user_id,))
+        self.connection.commit()
