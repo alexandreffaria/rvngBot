@@ -134,6 +134,18 @@ class OrderHandler:
             self.whatsapp_client.send_message(user_number, message)
             self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
             self.database.set_state(user_id, 'state', 'awaiting_pd_interest')
+            self.whatsapp_client.send_sticker(
+                to=user_number,
+                sticker="assets/stickers/todos-os-produtos.webp",
+                mime_type="image/webp"
+            )
+            message = "Você gostaria de comprar o Porta Dentinho de Leite?"
+            self.whatsapp_client.send_message(user_number, message, buttons=[
+                    Button("Sim", callback_data="Sim"),
+                    Button("Não", callback_data="Não"),
+                ])
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.database.set_state(user_id, 'state', 'awaiting_pd_interest')
             return
 
         # Create the link dynamically
