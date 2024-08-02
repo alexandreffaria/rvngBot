@@ -9,12 +9,29 @@ class StateHandler:
         self.database = database
 
     def initial_interaction(self, user_number):
-        message = "Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?"
-        self.whatsapp_client.send_message(user_number, message)
+        # Fetch user details from the database
+        user_details = self.database.get_user_by_phone(user_number)
 
-        user_id = self.database.insert_user(phone=user_number)
-        self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
-        self.database.set_state(user_id, 'state', 'awaiting_name')
+        if user_details and user_details['name']:
+            # If user is found and name exists
+            user_name = user_details['name']
+            user_role = user_details['role']
+            message = f"Olá, {user_name.split(' ')[0]}, tudo bem com você? Eu sou a assistente virtual da Fada do Dente. 🧚"
+            user_id = user_details['id']
+            self.database.set_state(user_details['id'], 'state', 'awaiting_help_type')
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+            self.handle_role(user_number, user_role)
+        else:
+            # If user is not found or name does not exist
+            message = "Olá, eu sou a assistente virtual da Fada do Dente. 🧚 Obrigada por entrar em contato. Para iniciar seu atendimento, qual o seu nome completo?"
+            user_id = self.database.insert_user(phone=user_number)
+            self.database.set_state(user_id, 'state', 'awaiting_name')
+            self.whatsapp_client.send_message(user_number, message)
+            self.database.insert_message(user_id, "bot", ME, "user", user_number, message, time.time())
+
+        
+
 
     def handle_name(self, user_number, user_input):
         user_id = self.database.insert_user(user_number)
@@ -32,7 +49,7 @@ class StateHandler:
         # Update the user with the role
         self.database.update_user(user_id, role=user_input)
         
-        message = "Obrigada pelas informações. 😊 Como podemos te ajudar hoje?"
+        message = "😊 Como podemos te ajudar hoje?"
         self.whatsapp_client.send_message(user_number, message, buttons=[
             Button("Fazer um pedido", callback_data="Fazer um pedido"),
             Button("Tirar dúvidas", callback_data="Tirar dúvidas"),
